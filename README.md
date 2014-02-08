@@ -27,3 +27,7 @@ Licence
 This code is copyrighted and released under the GNU General Public Licence version 3 (or at your option) a later version. See the LICENCE file for more information.
 
 The author is Rory McCann <rory@technomancy.org>.
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rory/split-large-polygons/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
