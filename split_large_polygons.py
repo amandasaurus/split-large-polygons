@@ -37,6 +37,8 @@ def main():
     conn = psycopg2.connect(**connect_args)
     cur = conn.cursor()
 
+    print "Splitting things larger than {:,}".format(args.area)
+
     try:
         step = 0
         while True:
@@ -52,10 +54,13 @@ def main():
             sql = fmt("select {id} as id, st_xmin({column}) as xmin, st_ymin({column}) as ymin, st_xmax({column}) as xmax, st_ymax({column}) as ymax from {table} where ST_Area({column}) > {area} order by ST_Area({column}) DESC")
             cur.execute(sql)
             rows = cur.fetchall()
+            
             if len(rows) == 0:
                 print "Finished"
                 break
+
             for row in rows:
+                # Should we split horizontally or vertically?
                 id, xmin, ymin, xmax, ymax = row
                 xsize = xmax - xmin
                 ysize = ymax - ymin
@@ -74,6 +79,8 @@ def main():
 
                 sql = "insert into {table} ({column}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id)
                 cur.execute(sql)
+                
+                # remove old
                 cur.execute("delete from {table} where {id_column} = {id_value};".format(table=args.table, id_column=args.id, id_value=id))
 
     finally:
