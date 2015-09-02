@@ -24,7 +24,7 @@ def main():
     parser.add_argument('-c', '--column', type=str, required=True)
     parser.add_argument('-i', '--id', type=str, required=True)
     parser.add_argument('-a', '--area', default=100, type=float)
-    parser.add_argument('--srid', default=4326, type=int)
+    parser.add_argument('-s', '--srid', default=4326, type=int)
 
     args = parser.parse_args()
 
