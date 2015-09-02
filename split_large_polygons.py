@@ -30,20 +30,26 @@ def main():
         fmt_vars.update(vars(args))
         return string.format(**fmt_vars)
 
-    try:
-        conn = psycopg2.connect(fmt("dbname={database}"))
-        cur = conn.cursor()
+    connect_args = {}
+    if args.database is not None:
+        connect_args['database'] = args.database
 
+    conn = psycopg2.connect(**connect_args)
+    cur = conn.cursor()
+
+    try:
+        step = 0
         while True:
+            step += 1
             cur.execute(fmt("select count(*) as count from {table} where ST_Area({column}) > {area};"))
             row = cur.fetchall()
             num_to_do = int(row[0][0])
-            print "There are {0} objects that need splitting".format(row[0][0])
+            print "[step {0:3d}] There are {1:,} objects that need splitting".format(step, row[0][0])
             if num_to_do == 0:
                 print "Finished"
                 break
             
-            sql = fmt("select {id} as id, st_xmin({column}) as xmin, st_ymin({column}) as ymin, st_xmax({column}) as xmax, st_ymax({column}) as ymax from {table} where ST_Area({column}) > {area} limit 1000;")
+            sql = fmt("select {id} as id, st_xmin({column}) as xmin, st_ymin({column}) as ymin, st_xmax({column}) as xmax, st_ymax({column}) as ymax from {table} where ST_Area({column}) > {area} order by ST_Area({column}) DESC")
             cur.execute(sql)
             rows = cur.fetchall()
             if len(rows) == 0:
