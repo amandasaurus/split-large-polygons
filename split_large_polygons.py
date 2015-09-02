@@ -6,15 +6,6 @@ import argparse
 import psycopg2
 
 
-def fmt(string, extras=None):
-    """
-    formats a string using the args (i.e cli args), make it easier
-    """
-    fmt_vars = {}
-    if extras:
-        fmt_vars.update(extras)
-    fmt_vars.update(vars(args))
-    return string.format(**fmt_vars)
 
 def main():
 
@@ -27,6 +18,16 @@ def main():
     parser.add_argument('-s', '--srid', default=4326, type=int)
 
     args = parser.parse_args()
+
+    def fmt(string, extras=None):
+        """
+        formats a string using the args (i.e cli args), make it easier
+        """
+        fmt_vars = {}
+        if extras:
+            fmt_vars.update(extras)
+        fmt_vars.update(vars(args))
+        return string.format(**fmt_vars)
 
     try:
         conn = psycopg2.connect(fmt("dbname={database}"))
