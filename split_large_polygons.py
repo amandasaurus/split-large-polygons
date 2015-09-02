@@ -28,7 +28,8 @@ def main():
         if extras:
             fmt_vars.update(extras)
         fmt_vars.update(vars(args))
-        return string.format(**fmt_vars)
+        result = string.format(**fmt_vars)
+        return result
 
     connect_args = {}
     if args.database is not None:
@@ -60,10 +61,11 @@ def main():
                 break
 
             for row in rows:
-                # Should we split horizontally or vertically?
                 id, xmin, ymin, xmax, ymax = row
                 xsize = xmax - xmin
                 ysize = ymax - ymin
+
+                # Should we split horizontally or vertically?
                 if xsize > ysize:
                     x1 = xmin + (xsize / 2)
                     x2 = x1
