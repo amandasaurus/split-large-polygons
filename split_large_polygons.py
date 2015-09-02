@@ -66,7 +66,7 @@ def main():
 
                 line_to_split = "ST_SetSRID( ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) ), {srid})".format(x1=x1, y1=y1, x2=x2, y2=y2, srid=args.srid)
 
-                sql = "insert into {table} ({column}) select ST_Multi((ST_Dump(ST_Split(the_geom, {line_to_split}))).geom) as {column} from land_polygons where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id)
+                sql = "insert into {table} ({column}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id)
                 cur.execute(sql)
                 cur.execute("delete from {table} where {id_column} = {id_value};".format(table=args.table, id_column=args.id, id_value=id))
 
