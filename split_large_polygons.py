@@ -9,8 +9,9 @@ import psycopg2
 
 def main():
 
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--database', type=str, required=True)
+    parser.add_argument('-d', '--database', type=str, required=False)
     parser.add_argument('-t', '--table', type=str, required=True)
     parser.add_argument('-c', '--column', type=str, required=True)
     parser.add_argument('-i', '--id', type=str, required=True)
