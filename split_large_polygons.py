@@ -63,13 +63,15 @@ def main():
         connect_args['database'] = args.database
 
     conn = psycopg2.connect(**connect_args)
-    cur = conn.cursor()
 
     print "Splitting things larger than {:,}".format(args.area)
 
     try:
         step = 0
         while True:
+            conn.commit()
+            cur = conn.cursor()
+
             step += 1
             cur.execute(fmt("select count(*) as count from {table} where ST_Area({column}) > {area};"))
             row = cur.fetchall()
