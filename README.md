@@ -35,7 +35,10 @@ Here a 0.01 degree overlap will be left between all polygons.
 Motivation
 ==========
 
-I had a table of large polygons of land from http://openstreetmapdata.com/. Large polygons mean that bounding box and indexes are less useful. Lots of small geometries are more effecient and allow better index usage. So I wrote this programme to split large polygons.
+I had a table of large polygons of land from http://openstreetmapdata.com/. Large polygons mean that bounding box and indexes are less useful. Lots of small geometries are more effecient and allow better index usage. You can already download pre-split polygons from that site. But if you want even smaller polygons, then you can use this programme.
+
+Some projections do not cover the whole world. Mapnik is able to reproject a 4326 or 3857 dataset from openstreetmapdata to whatever you want. But if one part of the polygon goes outside the valid area of that projection, then mapnik can drop the whole polygon. This can be a problem when it drops (say) the Eurasia polygon. This programme splits the polygons into many smaller, individual shapes so that mapnik will only drop the smaller polygons that are invalid and keep the ones that are valid.
+
 
 Licence
 =======
