@@ -7,6 +7,9 @@ import psycopg2
 import math
 
 
+def sridify(text, srid):
+    return "ST_SetSRID( {text}, {srid} )".format(text=text, srid=srid)
+
 
 def main():
 
@@ -107,7 +110,7 @@ def main():
                     y2 = y1
 
                 if buffer is None and buffer_percent is None:
-                    line_to_split = "ST_SetSRID( ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) ), {srid})".format(x1=x1, y1=y1, x2=x2, y2=y2, srid=args.srid)
+                    line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1, x2=x2, y2=y2), args.srid)
 
                     sql = "insert into {table} ({column}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id)
                     cur.execute(sql)
@@ -119,14 +122,14 @@ def main():
                         # Just a jump to the left ...
                         x1_a = x1 - buffer
                         x2_a = x1_a
-                        line_to_split = "ST_SetSRID( ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) ), {srid})".format(x1=x1_a, y1=y1, x2=x2_a, y2=y2, srid=args.srid)
+                        line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1_a, y1=y1, x2=x2_a, y2=y2), args.srid)
                         sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_xmin({column}) >= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_a)
                         cur.execute(sql)
 
                         # ... and then a step to the right!
                         x1_b = x1 + buffer
                         x2_b = x1_b
-                        line_to_split = "ST_SetSRID( ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) ), {srid})".format(x1=x1_b, y1=y1, x2=x2_b, y2=y2, srid=args.srid)
+                        line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1_b, y1=y1, x2=x2_b, y2=y2), args.srid)
                         sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_xmax({column}) <= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_b)
                         cur.execute(sql)
                     else:
@@ -134,13 +137,13 @@ def main():
                             buffer = ysize * (buffer_percent / 100)
                         y1_a = y1 - buffer
                         y2_a = y1_a
-                        line_to_split = "ST_SetSRID( ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) ), {srid})".format(x1=x1, y1=y1_a, x2=x2, y2=y2_a, srid=args.srid)
+                        line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1_a, x2=x2, y2=y2_a), args.srid)
                         sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_ymin({column}) >= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_a)
                         cur.execute(sql)
 
                         y1_b = y1 + buffer
                         y2_b = y1_b
-                        line_to_split = "ST_SetSRID( ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) ), {srid})".format(x1=x1, y1=y1_b, x2=x2, y2=y2_b, srid=args.srid)
+                        line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1_b, x2=x2, y2=y2_b), args.srid)
                         sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_ymax({column}) <= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_b)
                         cur.execute(sql)
 
