@@ -8,7 +8,10 @@ import math
 
 
 def sridify(text, srid):
-    return "ST_SetSRID( {text}, {srid} )".format(text=text, srid=srid)
+    if srid == 0:
+        return text
+    else:
+        return "ST_SetSRID( {text}, {srid} )".format(text=text, srid=srid)
 
 
 def main():
@@ -19,7 +22,7 @@ def main():
     parser.add_argument('-c', '--column', type=str, required=True, help="Geometry column name", metavar="GEOMETRY_COLUMN")
     parser.add_argument('-i', '--id', type=str, required=True, help="Primary key column")
     parser.add_argument('-a', '--area', default=100, type=float, help="Maximum area")
-    parser.add_argument('-s', '--srid', default=4326, type=int, help="SRID of the table")
+    parser.add_argument('-s', '--srid', default=0, type=int, help="SRID of the table (if not provided, srid is unset)")
     parser.add_argument('-b', '--buffer', type=float, help="Size of the buffer (in SRID units) to have as an overlap")
     parser.add_argument('-B', '--buffer-percent', type=float, help="Calculate the buffer as this much of a percentage of the shape")
 
