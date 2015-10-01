@@ -82,6 +82,8 @@ def main():
         columns.remove(args.column)
         columns.remove(args.id)
         columns.sort()
+
+        extra_cols = ", ".join(columns)
         
 
         step = 0
@@ -126,10 +128,9 @@ def main():
                 if buffer is None and buffer_percent is None:
                     line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1, x2=x2, y2=y2), args.srid)
 
-                    sql = "insert into {table} ({column}, {extra_cols}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, extra_cols=", ".join(columns))
+                    sql = "insert into {table} ({column}, {extra_cols}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, extra_cols=extra_cols)
                     cur.execute(sql)
                 else:
-                    # FIXME support columns
                     # do it in 2 steps, one where we move to one side, the other where we go to the other
                     if xsize > ysize:
                         if buffer_percent is not None:
@@ -138,14 +139,14 @@ def main():
                         x1_a = x1 - buffer
                         x2_a = x1_a
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1_a, y1=y1, x2=x2_a, y2=y2), args.srid)
-                        sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_xmin({column}) >= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_a)
+                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_xmin({column}) >= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_a, extra_cols=extra_cols)
                         cur.execute(sql)
 
                         # ... and then a step to the right!
                         x1_b = x1 + buffer
                         x2_b = x1_b
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1_b, y1=y1, x2=x2_b, y2=y2), args.srid)
-                        sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_xmax({column}) <= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_b)
+                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_xmax({column}) <= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_b, extra_cols=extra_cols)
                         cur.execute(sql)
                     else:
                         if buffer_percent is not None:
@@ -153,13 +154,13 @@ def main():
                         y1_a = y1 - buffer
                         y2_a = y1_a
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1_a, x2=x2, y2=y2_a), args.srid)
-                        sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_ymin({column}) >= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_a)
+                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_ymin({column}) >= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_a)
                         cur.execute(sql)
 
                         y1_b = y1 + buffer
                         y2_b = y1_b
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1_b, x2=x2, y2=y2_b), args.srid)
-                        sql = "insert into {table} ({column}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value}) as inner_table where st_ymax({column}) <= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_b)
+                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_ymax({column}) <= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_b, extra_cols=extra_cols)
                         cur.execute(sql)
 
                     
