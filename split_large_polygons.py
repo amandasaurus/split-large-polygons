@@ -69,10 +69,21 @@ def main():
         connect_args['database'] = args.database
 
     conn = psycopg2.connect(**connect_args)
+    cur = conn.cursor()
 
     print "Splitting things larger than {:,}".format(args.area)
 
     try:
+
+        # get column names
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = %s", [args.table])
+        columns = [x[0] for x in cur.fetchall()]
+        # we don't want to keep these
+        columns.remove(args.column)
+        columns.remove(args.id)
+        columns.sort()
+        
+
         step = 0
         while True:
             conn.commit()
@@ -115,9 +126,10 @@ def main():
                 if buffer is None and buffer_percent is None:
                     line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1, x2=x2, y2=y2), args.srid)
 
-                    sql = "insert into {table} ({column}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id)
+                    sql = "insert into {table} ({column}, {extra_cols}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, extra_cols=", ".join(columns))
                     cur.execute(sql)
                 else:
+                    # FIXME support columns
                     # do it in 2 steps, one where we move to one side, the other where we go to the other
                     if xsize > ysize:
                         if buffer_percent is not None:
