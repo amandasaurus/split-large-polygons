@@ -5,7 +5,7 @@ from __future__ import division
 import argparse
 import psycopg2
 import math
-
+import sys
 
 def sridify(text, srid):
     if srid == 0:
@@ -95,7 +95,8 @@ def main():
             cur.execute(fmt("select count(*) as count from {table} where ST_Area({column}) > {area};"))
             row = cur.fetchall()
             num_to_do = int(row[0][0])
-            print "[step {0:3d}] There are {1:,} objects that need splitting".format(step, row[0][0])
+            sys.stdout.write("[step {0:3d}] There are {1:,} objects that need splitting\n".format(step, row[0][0]))
+            sys.stdout.flush()
             if num_to_do == 0:
                 print "Finished"
                 break
@@ -108,7 +109,14 @@ def main():
                 print "Finished"
                 break
 
+            num_done = 0
+
             for row in rows:
+                if num_done % 500 == 0:
+                    sys.stdout.write("\r[step {0:3d}] Done {1:,} of {2:,}".format(step, num_done, len(rows)))
+                    sys.stdout.flush()
+                num_done += 1
+
                 id, xmin, ymin, xmax, ymax = row
                 xsize = xmax - xmin
                 ysize = ymax - ymin
