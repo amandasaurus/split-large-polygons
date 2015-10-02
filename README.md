@@ -15,9 +15,9 @@ Example usage:
 
     split-large-polygons -d gis -t land_polygons -c the_geom -i gid -a 0.1
 
-This will split the rows in ``land_polygons`` (in the ``gis`` database) into interately smaller polygons until none of them are larger than 0.1 in area. The unit of area is based on your SRID (the default is 4326, but it can be overridden by the ``-s``/``--srid`` option). So this will split things larger than 0.1 square degrees.
+This will split the rows in ``land_polygons`` (in the ``gis`` database) into interately smaller polygons until none of them are larger than 0.1 in area. The unit of area is based on your SRID (the default is unset, but it can be overridden by the ``-s``/``--srid`` option). So this will split things larger than 0.1 square degrees.
 
-The table must have a primary key, which is specified in the ``-i``/``--id`` argument. It will delete the older, larger rows. This currently does not support tables which have any other columns except for the geometry and id columns.
+The table must have a primary key, which is specified in the ``-i``/``--id`` argument. It will delete the older, larger rows. The values of other columns will be copied to the new, split, polygons.
 
 You need PostGIS 2.0 or later, since this programme needs the [ST_Split](http://postgis.refractions.net/documentation/manual-2.0/ST_Split.html) method.
 
