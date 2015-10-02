@@ -95,7 +95,7 @@ def main():
             cur.execute(fmt("select count(*) as count from {table} where ST_Area({column}) > {area};"))
             row = cur.fetchall()
             num_to_do = int(row[0][0])
-            sys.stdout.write("[step {0:3d}] There are {1:,} objects that need splitting\n".format(step, row[0][0]))
+            sys.stdout.write("\n[step {0:3d}] There are {1:,} objects that need splitting\n".format(step, row[0][0]))
             sys.stdout.flush()
             if num_to_do == 0:
                 print "Finished"
