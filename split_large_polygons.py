@@ -83,7 +83,7 @@ def main():
         columns.remove(args.id)
         columns.sort()
 
-        extra_cols = ", ".join(columns)
+        extra_cols = ", ".join('"{}"'.format(x) for x in columns)
         
 
         step = 0
