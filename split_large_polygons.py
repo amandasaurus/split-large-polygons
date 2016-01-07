@@ -25,6 +25,7 @@ def main():
     parser.add_argument('-s', '--srid', default=0, type=int, help="SRID of the table (if not provided, srid is unset)")
     parser.add_argument('-b', '--buffer', type=float, help="Size of the buffer (in SRID units) to have as an overlap")
     parser.add_argument('-B', '--buffer-percent', type=float, help="Calculate the buffer as this much of a percentage of the shape")
+    parser.add_argument('-q', '--quiet', default=False, action="store_true", help="Don't output anything")
 
     args = parser.parse_args()
 
@@ -71,7 +72,8 @@ def main():
     conn = psycopg2.connect(**connect_args)
     cur = conn.cursor()
 
-    print "Splitting things larger than {:,}".format(args.area)
+    if not args.quiet:
+        print "Splitting things larger than {:,}".format(args.area)
 
     try:
 
@@ -83,7 +85,10 @@ def main():
         columns.remove(args.id)
         columns.sort()
 
-        extra_cols = ", ".join('"{}"'.format(x) for x in columns)
+        if len(columns) == 0:
+            extra_cols = ""
+        else:
+            extra_cols = ", " + ", ".join('"{}"'.format(x) for x in columns)
         
 
         step = 0
@@ -95,10 +100,12 @@ def main():
             cur.execute(fmt("select count(*) as count from {table} where ST_Area({column}) > {area};"))
             row = cur.fetchall()
             num_to_do = int(row[0][0])
-            sys.stdout.write("\n[step {0:3d}] There are {1:,} objects that need splitting\n".format(step, row[0][0]))
-            sys.stdout.flush()
+            if not args.quiet:
+                sys.stdout.write("\n[step {0:3d}] There are {1:,} objects that need splitting\n".format(step, row[0][0]))
+                sys.stdout.flush()
             if num_to_do == 0:
-                print "Finished"
+                if not args.quiet:
+                    print "Finished"
                 break
             
             sql = fmt("select {id} as id, st_xmin({column}) as xmin, st_ymin({column}) as ymin, st_xmax({column}) as xmax, st_ymax({column}) as ymax from {table} where ST_Area({column}) > {area} order by ST_Area({column}) DESC")
@@ -106,15 +113,17 @@ def main():
             rows = cur.fetchall()
             
             if len(rows) == 0:
-                print "Finished"
+                if not args.quiet:
+                    print "Finished"
                 break
 
             num_done = 0
 
             for row in rows:
                 if num_done % 500 == 0:
-                    sys.stdout.write("\r[step {0:3d}] Done {1:,} of {2:,}".format(step, num_done, len(rows)))
-                    sys.stdout.flush()
+                    if not args.quiet:
+                        sys.stdout.write("\r[step {0:3d}] Done {1:,} of {2:,}".format(step, num_done, len(rows)))
+                        sys.stdout.flush()
                 num_done += 1
 
                 id, xmin, ymin, xmax, ymax = row
@@ -136,7 +145,7 @@ def main():
                 if buffer is None and buffer_percent is None:
                     line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1, x2=x2, y2=y2), args.srid)
 
-                    sql = "insert into {table} ({column}, {extra_cols}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, extra_cols=extra_cols)
+                    sql = "insert into {table} ({column}{extra_cols}) select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}{extra_cols} from {table} where {id_column} = {id_value};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, extra_cols=extra_cols)
                     cur.execute(sql)
                 else:
                     # do it in 2 steps, one where we move to one side, the other where we go to the other
@@ -147,14 +156,14 @@ def main():
                         x1_a = x1 - buffer
                         x2_a = x1_a
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1_a, y1=y1, x2=x2_a, y2=y2), args.srid)
-                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_xmin({column}) >= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_a, extra_cols=extra_cols)
+                        sql = "insert into {table} ({column}{extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}{extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_xmin({column}) >= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_a, extra_cols=extra_cols)
                         cur.execute(sql)
 
                         # ... and then a step to the right!
                         x1_b = x1 + buffer
                         x2_b = x1_b
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1_b, y1=y1, x2=x2_b, y2=y2), args.srid)
-                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_xmax({column}) <= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_b, extra_cols=extra_cols)
+                        sql = "insert into {table} ({column}{extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}{extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_xmax({column}) <= {x1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, x1=x1_b, extra_cols=extra_cols)
                         cur.execute(sql)
                     else:
                         if buffer_percent is not None:
@@ -162,13 +171,13 @@ def main():
                         y1_a = y1 - buffer
                         y2_a = y1_a
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1_a, x2=x2, y2=y2_a), args.srid)
-                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_ymin({column}) >= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_a)
+                        sql = "insert into {table} ({column}{extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}{extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_ymin({column}) >= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_a)
                         cur.execute(sql)
 
                         y1_b = y1 + buffer
                         y2_b = y1_b
                         line_to_split = sridify("ST_MakeLine( ST_MakePoint( {x1}, {y1} ), ST_MakePoint( {x2}, {y2} ) )".format(x1=x1, y1=y1_b, x2=x2, y2=y2_b), args.srid)
-                        sql = "insert into {table} ({column}, {extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}, {extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_ymax({column}) <= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_b, extra_cols=extra_cols)
+                        sql = "insert into {table} ({column}{extra_cols}) select {column} from (select ST_Multi((ST_Dump(ST_Split({column}, {line_to_split}))).geom) as {column}{extra_cols} from {table} where {id_column} = {id_value}) as inner_table where st_ymax({column}) <= {y1};".format(table=args.table, column=args.column, line_to_split=line_to_split, id_column=args.id, id_value=id, y1=y1_b, extra_cols=extra_cols)
                         cur.execute(sql)
 
                     
